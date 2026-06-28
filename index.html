@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北京加旺电器有限公司 - 财务报销系统</title>
+<style>
+/* Reset & Base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  background: #f0f2f5; color: #333; min-height: 100vh;
+}
+
+/* Login Page */
+.login-container {
+  display: flex; align-items: center; justify-content: center; min-height: 100vh;
+  background: linear-gradient(135deg, #1a3a5c 0%, #2c5f8a 50%, #4a90c4 100%);
+}
+.login-box {
+  background: #fff; border-radius: 12px; padding: 48px 40px;
+  width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.login-box h2 { text-align: center; font-size: 24px; color: #1a3a5c; margin-bottom: 8px; }
+.login-box .subtitle { text-align: center; font-size: 13px; color: #999; margin-bottom: 32px; }
+.login-box .form-group { margin-bottom: 20px; }
+.login-box label { display: block; font-size: 14px; font-weight: 600; color: #555; margin-bottom: 6px; }
+.login-box input[type="text"],
+.login-box input[type="password"] {
+  width: 100%; height: 44px; border: 1px solid #d9d9d9; border-radius: 6px;
+  padding: 0 14px; font-size: 14px; transition: border-color 0.3s;
+}
+.login-box input:focus { border-color: #2c5f8a; outline: none; box-shadow: 0 0 0 3px rgba(44,95,138,0.12); }
+.login-box .login-btn {
+  width: 100%; height: 44px; background: #1a3a5c; color: #fff; border: none;
+  border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer;
+  margin-top: 8px; transition: background 0.3s;
+}
+.login-box .login-btn:hover { background: #2c5f8a; }
+.login-box .error-msg { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 12px; min-height: 20px; }
+.login-box .hint { text-align: center; font-size: 12px; color: #aaa; margin-top: 16px; }
+
+/* Main Layout */
+.main-container { display: none; min-height: 100vh; }
+.main-container.active { display: flex; }
+.sidebar {
+  width: 220px; background: linear-gradient(180deg, #1a3a5c 0%, #1e4976 100%);
+  color: #fff; flex-shrink: 0; padding-top: 20px; position: relative;
+}
+.sidebar .logo { padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 8px; }
+.sidebar .logo h3 { font-size: 15px; font-weight: 600; }
+.sidebar .logo p { font-size: 11px; opacity: 0.6; margin-top: 4px; }
+.sidebar .nav-item {
+  display: flex; align-items: center; padding: 14px 20px; cursor: pointer;
+  font-size: 14px; color: rgba(255,255,255,0.75); transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+.sidebar .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.sidebar .nav-item.active { background: rgba(255,255,255,0.12); border-left-color: #5dade2; color: #fff; font-weight: 600; }
+.sidebar .nav-icon { margin-right: 10px; font-size: 16px; }
+.sidebar .nav-bottom { position: absolute; bottom: 0; width: 220px; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.12); }
+
+.content-area { flex: 1; padding: 24px 32px; overflow-y: auto; }
+
+/* Header */
+.page-header { margin-bottom: 24px; }
+.page-header h2 { font-size: 22px; color: #1a3a5c; }
+.page-header .breadcrumb { font-size: 13px; color: #999; margin-top: 4px; }
+
+/* Cards */
+.card {
+  background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px; margin-bottom: 20px;
+}
+.card-title { font-size: 16px; font-weight: 600; color: #1a3a5c; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+
+/* Stats Row */
+.stats-row { display: flex; gap: 16px; margin-bottom: 20px; }
+.stat-card {
+  flex: 1; background: #fff; border-radius: 8px; padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;
+}
+.stat-card .stat-num { font-size: 32px; font-weight: 700; color: #1a3a5c; }
+.stat-card .stat-label { font-size: 13px; color: #999; margin-top: 4px; }
+.stat-card.pending .stat-num { color: #f39c12; }
+.stat-card.approved .stat-num { color: #27ae60; }
+.stat-card.rejected .stat-num { color: #e74c3c; }
+.stat-card.total .stat-num { color: #2c5f8a; }
+
+/* Form */
+.form-row { display: flex; gap: 20px; margin-bottom: 18px; }
+.form-col { flex: 1; }
+.form-col.full { flex: 1; }
+.form-group { margin-bottom: 0; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px; }
+.form-group label .required { color: #e74c3c; margin-left: 2px; }
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea {
+  width: 100%; height: 40px; border: 1px solid #d9d9d9; border-radius: 6px;
+  padding: 0 12px; font-size: 14px; font-family: inherit; transition: border-color 0.3s;
+}
+.form-group textarea { height: 80px; padding: 10px 12px; resize: vertical; }
+.form-group input:focus, .form-group textarea:focus {
+  border-color: #2c5f8a; outline: none; box-shadow: 0 0 0 3px rgba(44,95,138,0.1);
+}
+.form-actions { display: flex; gap: 12px; margin-top: 8px; }
+.btn {
+  height: 40px; padding: 0 24px; border: none; border-radius: 6px;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+}
+.btn-primary { background: #1a3a5c; color: #fff; }
+.btn-primary:hover { background: #2c5f8a; }
+.btn-success { background: #27ae60; color: #fff; }
+.btn-success:hover { background: #2ecc71; }
+.btn-default { background: #f5f5f5; color: #666; border: 1px solid #d9d9d9; }
+.btn-default:hover { background: #e8e8e8; }
+.btn-danger { background: #e74c3c; color: #fff; }
+.btn-danger:hover { background: #c0392b; }
+
+/* Alert Messages */
+.alert { padding: 12px 16px; border-radius: 6px; font-size: 14px; margin-bottom: 16px; display: none; }
+.alert.show { display: block; }
+.alert-success { background: #eafaf1; color: #27ae60; border: 1px solid #a9dfbf; }
+.alert-error { background: #fdecec; color: #e74c3c; border: 1px solid #f5b7b1; }
+.alert-info { background: #eaf2f8; color: #2c5f8a; border: 1px solid #aed6f1; }
+
+/* Table */
+.table-container { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table thead th {
+  background: #f8fafb; color: #555; font-weight: 600; text-align: left;
+  padding: 12px 14px; border-bottom: 2px solid #e8e8e8; white-space: nowrap;
+}
+table tbody td { padding: 11px 14px; border-bottom: 1px solid #f0f0f0; color: #333; }
+table tbody tr:hover { background: #fafcfe; }
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.status-draft { background: #f0f0f0; color: #999; }
+.status-submitted { background: #eaf2f8; color: #2c5f8a; }
+.status-pending { background: #fef9e7; color: #f39c12; }
+.status-approved { background: #eafaf1; color: #27ae60; }
+.status-rejected { background: #fdecec; color: #e74c3c; }
+
+/* Search Bar */
+.search-bar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; }
+.search-bar input {
+  height: 40px; border: 1px solid #d9d9d9; border-radius: 6px; padding: 0 12px; font-size: 13px;
+}
+.search-bar input[type="text"] { width: 200px; }
+.search-bar input { width: 240px; }
+.search-bar select { width: 140px; }
+.empty-state { text-align: center; padding: 48px; color: #999; font-size: 14px; }
+
+/* Detail Modal */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.45); z-index: 1000;
+}
+.modal-overlay.show { display: flex; justify-content: center; align-items: center; }
+.modal {
+  background: #fff; border-radius: 10px; width: 580px; max-height: 85vh;
+  overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid #f0f0f0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header h3 { font-size: 17px; color: #1a3a5c; }
+.modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; }
+.modal-close:hover { color: #333; }
+.modal-body { padding: 24px; }
+.modal-body .detail-row { display: flex; margin-bottom: 14px; font-size: 14px; }
+.modal-body .detail-label { width: 100px; color: #888; flex-shrink: 0; }
+.modal-body .detail-value { color: #333; }
+.modal-footer {
+  padding: 16px 24px; border-top: 1px solid #f0f0f0;
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed; top: 24px; right: 24px; z-index: 2000;
+  padding: 14px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15); transition: all 0.3s ease;
+  opacity: 0; pointer-events: none;
+}
+.toast.show { opacity: 1; pointer-events: auto; }
+.toast-success { background: #27ae60; color: #fff; }
+.toast-error { background: #e74c3c; color: #fff; }
+
+/* Page Panels */
+.page-panel { display: none; }
+.page-panel.active { display: block; }
+</style>
+</head>
+<body>
+<!--
+  ==================== RPA 自动化元素 ID 说明 ====================
+  以下元素 ID 可供 WeAutomate Studio 的 type/click/getText 控件直接使用：
+  
+  【登录页面】
+    #loginUsername  —— 用户名输入框
+    #loginPassword  —— 密码输入框
+    #loginBtn       —— 登录按钮
+    #loginError     —— 错误提示信息（getText 获取）
+  
+  【报销单录入页面】（登录后默认显示）
+    #fieldReimburser  —— 报销人输入框
+    #fieldDepartment  —— 部门输入框（直接输入，如：销售部、采购部、技术部、财务部、行政部）
+    #fieldDate        —— 报销日期输入框（直接输入YYYY-MM-DD格式，如：2026-06-28）
+    #fieldExpenseType —— 费用类型输入框（直接输入，如：差旅费、办公费、业务招待费、交通费、通讯费、其他）
+    #fieldAmount      —— 金额输入框
+    #fieldReason      —— 事由说明文本域
+    #btnSubmit        —— 提交审批按钮
+    #btnSaveDraft     —— 暂存草稿按钮
+    #alertSuccess     —— 提交成功提示（class含"show"时可见，getText获取文本）
+    #alertError       —— 提交失败提示
+    #alertDraft       —— 草稿保存提示
+  
+  【报销单列表页面】（点击"报销单列表"导航）
+    #searchKeyword    —— 搜索框
+    #filterDepartment —— 部门筛选输入框（直接输入部门名称）
+    #filterStatus     —— 状态筛选输入框（直接输入状态名称）
+    #reimbursementTable —— 报销单表格
+    #tableBody        —— 表格主体（含每行数据）
+    #totalCount       —— 总条数显示
+    #btnBatchApprove —— 批量审批按钮
+  
+  【确认提交成功】
+    RPA可在点击#btnSubmit后，用getText读取#alertSuccess的文本内容
+    若文本包含"成功"或"提交成功"，则本条录入成功，继续下一条
+  ========================================================================
+-->
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="login-container">
+  <div class="login-box">
+    <h2>财务报销管理系统</h2>
+    <p class="subtitle">北京加旺电器有限公司 · 内部系统</p>
+    <form id="loginForm" onsubmit="return handleLogin(event)">
+      <div class="form-group">
+        <label for="loginUsername">用户名</label>
+        <input type="text" id="loginUsername" placeholder="请输入工号或用户名" required>
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">密　码</label>
+        <input type="password" id="loginPassword" placeholder="请输入密码" required>
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">登 录</button>
+      <div class="error-msg" id="loginError"></div>
+    </form>
+    <p class="hint">演示账号：admin / admin123</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="main-container">
+  <aside class="sidebar">
+    <div class="logo">
+      <h3>加旺电器财务系统</h3>
+      <p>Internal Finance System v2.1</p>
+    </div>
+    <nav>
+      <div class="nav-item active" id="navEntry" onclick="switchPage('entry')">
+        <span class="nav-icon">&#128221;</span> 报销单录入
+      </div>
+      <div class="nav-item" id="navList" onclick="switchPage('list')">
+        <span class="nav-icon">&#128203;</span> 报销单列表
+      </div>
+      <div class="nav-item" id="navDashboard" onclick="switchPage('dashboard')">
+        <span class="nav-icon">&#128202;</span> 报销概览
+      </div>
+    </nav>
+    <div class="nav-bottom">
+      <div class="nav-item" onclick="handleLogout()">
+        <span class="nav-icon">&#128682;</span> 退出登录
+      </div>
+    </div>
+  </aside>
+
+  <main class="content-area">
+    <div class="toast" id="toast"></div>
+
+    <!-- 报销单录入页面 -->
+    <div class="page-panel active" id="pageEntry">
+      <div class="page-header">
+        <h2>费用报销单录入</h2>
+        <p class="breadcrumb">首页 / 报销管理 / 费用报销单录入</p>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128221; 新建报销申请</div>
+        <div class="alert alert-success" id="alertSuccess">报销单提交成功！审批流水号已生成。</div>
+        <div class="alert alert-error" id="alertError">提交失败，请检查表单信息是否完整。</div>
+        <div class="alert alert-info" id="alertDraft">草稿已保存。</div>
+        <form id="reimbursementForm" onsubmit="return handleSubmit(event)">
+          <div class="form-row">
+            <div class="form-col">
+              <div class="form-group">
+                <label for="fieldReimburser">报销人<span class="required">*</span></label>
+                <input type="text" id="fieldReimburser" placeholder="请输入报销人姓名" required>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <label for="fieldDepartment">部门<span class="required">*</span></label>
+                <input type="text" id="fieldDepartment" placeholder="请输入部门（如：销售部、采购部、技术部、财务部、行政部）" required>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-col">
+              <div class="form-group">
+                <label for="fieldDate">报销日期<span class="required">*</span></label>
+                <input type="text" id="fieldDate" placeholder="请输入报销日期（如：2026-06-28）" required>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <label for="fieldExpenseType">费用类型<span class="required">*</span></label>
+                <input type="text" id="fieldExpenseType" placeholder="请输入费用类型（如：差旅费、办公费、业务招待费、交通费、通讯费、其他）" required>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-col">
+              <div class="form-group">
+                <label for="fieldAmount">金额（元）<span class="required">*</span></label>
+                <input type="number" id="fieldAmount" placeholder="请输入报销金额" min="0.01" step="0.01" required>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <label for="fieldAttachment">附件上传</label>
+                <input type="file" id="fieldAttachment" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" style="border:none;padding:8px 0;">
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-col full">
+              <div class="form-group">
+                <label for="fieldReason">事由说明<span class="required">*</span></label>
+                <textarea id="fieldReason" placeholder="请详细说明费用发生事由、地点、参与人员等信息" required></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="btnSubmit">提交审批</button>
+            <button type="button" class="btn btn-default" id="btnSaveDraft" onclick="handleSaveDraft()">暂存草稿</button>
+            <button type="reset" class="btn btn-default" id="btnReset">清空重置</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 报销单列表页面 -->
+    <div class="page-panel" id="pageList">
+      <div class="page-header">
+        <h2>报销单列表</h2>
+        <p class="breadcrumb">首页 / 报销管理 / 报销单列表</p>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128269; 查询筛选</div>
+        <div class="search-bar">
+          <input type="text" id="searchKeyword" placeholder="搜索报销人、事由..." oninput="renderTable()">
+          <input type="text" id="filterDepartment" placeholder="筛选部门（留空显示全部）" oninput="renderTable()">
+          <input type="text" id="filterStatus" placeholder="筛选状态（留空显示全部）" oninput="renderTable()">
+          <button class="btn btn-success" id="btnBatchApprove" onclick="batchApprove()" style="margin-left:auto">批量审批通过</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128203; 报销单明细列表（共 <span id="totalCount">0</span> 条）</div>
+        <div class="table-container">
+          <table id="reimbursementTable">
+            <thead>
+              <tr>
+                <th style="width:40px"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                <th style="width:50px">序号</th>
+                <th style="width:70px">报销人</th>
+                <th style="width:70px">部门</th>
+                <th style="width:95px">报销日期</th>
+                <th style="width:85px">费用类型</th>
+                <th style="width:80px">金额(元)</th>
+                <th>事由</th>
+                <th style="width:80px">审批状态</th>
+                <th style="width:120px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyState">暂无报销记录</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 报销概览页面 -->
+    <div class="page-panel" id="pageDashboard">
+      <div class="page-header">
+        <h2>报销概览</h2>
+        <p class="breadcrumb">首页 / 报销管理 / 数据概览</p>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card total">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">报销总笔数</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="stat-num" id="statPending">0</div>
+          <div class="stat-label">待审批</div>
+        </div>
+        <div class="stat-card approved">
+          <div class="stat-num" id="statApproved">0</div>
+          <div class="stat-label">已审批</div>
+        </div>
+        <div class="stat-card rejected">
+          <div class="stat-num" id="statRejected">0</div>
+          <div class="stat-label">已驳回</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128202; 费用类型分布</div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>费用类型</th><th>笔数</th><th>金额合计(元)</th><th>占比</th></tr></thead>
+            <tbody id="categorySummary"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>报销单详情</h3>
+      <button class="modal-close" onclick="closeDetailModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter">
+      <button class="btn btn-success" id="modalApproveBtn" onclick="approveFromModal()">审批通过</button>
+      <button class="btn btn-danger" id="modalRejectBtn" onclick="rejectFromModal()">驳回报销</button>
+      <button class="btn btn-default" onclick="closeDetailModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'jiawang_reimbursement_data';
+const USERS = { 'admin': 'admin123', 'zhangming': '123456', 'user001': '123456' };
+const DEPTS = { 'admin': '财务部', 'zhangming': '财务部', 'user001': '销售部' };
+const NAMES = { 'admin': '系统管理员', 'zhangming': '张会计', 'user001': '演示用户' };
+
+let currentUser = null;
+let currentDetailId = null;
+
+function getData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+/* ========== 登录 ========== */
+function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errorEl = document.getElementById('loginError');
+
+  if (!username || !password) {
+    errorEl.textContent = '请输入用户名和密码';
+    return false;
+  }
+  if (USERS[username] && USERS[username] === password) {
+    currentUser = { username, dept: DEPTS[username], name: NAMES[username] };
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainApp').classList.add('active');
+    document.getElementById('fieldDepartment').value = currentUser.dept || '';
+    document.getElementById('fieldReimburser').value = currentUser.name || '';
+    errorEl.textContent = '';
+    switchPage('list');
+    renderTable();
+    updateDashboard();
+    return false;
+  }
+  errorEl.textContent = '用户名或密码错误，请重试';
+  return false;
+}
+
+function handleLogout() {
+  currentUser = null;
+  document.getElementById('loginPage').style.display = '';
+  document.getElementById('mainApp').classList.remove('active');
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').textContent = '';
+}
+
+/* ========== 页面切换 ========== */
+function switchPage(page) {
+  document.querySelectorAll('.page-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) {
+    var onclickStr = n.getAttribute('onclick') || '';
+    if (onclickStr.indexOf('Logout') >= 0) return;
+    n.classList.remove('active');
+  });
+
+  var pageMap = { entry: 'pageEntry', list: 'pageList', dashboard: 'pageDashboard' };
+  var navMap = { entry: 'navEntry', list: 'navList', dashboard: 'navDashboard' };
+
+  if (pageMap[page]) document.getElementById(pageMap[page]).classList.add('active');
+  if (navMap[page]) document.getElementById(navMap[page]).classList.add('active');
+
+  if (page === 'list') renderTable();
+  if (page === 'dashboard') updateDashboard();
+}
+
+/* ========== Toast 提示 ========== */
+function showToast(msg, type) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast toast-' + type;
+  setTimeout(function() { toast.classList.remove('show'); }, 3000);
+  setTimeout(function() { toast.classList.add('show'); }, 10);
+}
+
+/* ========== 表单提交 ========== */
+function handleSubmit(e) {
+  e.preventDefault();
+
+  var reimburser = document.getElementById('fieldReimburser').value.trim();
+  var department = document.getElementById('fieldDepartment').value;
+  var date = document.getElementById('fieldDate').value;
+  var expenseType = document.getElementById('fieldExpenseType').value;
+  var amount = parseFloat(document.getElementById('fieldAmount').value);
+  var reason = document.getElementById('fieldReason').value.trim();
+  var attachmentInput = document.getElementById('fieldAttachment');
+  var attachmentName = attachmentInput.files.length > 0 ? attachmentInput.files[0].name : '';
+
+  if (!reimburser || !department || !date || !expenseType || isNaN(amount) || amount <= 0 || !reason) {
+    showAlert('alertError');
+    return false;
+  }
+
+  var data = getData();
+  var newId = 'BX' + new Date().getFullYear() + String(data.length + 1).padStart(4, '0');
+
+  var record = {
+    id: newId,
+    序号: data.length + 1,
+    报销人: reimburser,
+    部门: department,
+    报销日期: date,
+    费用类型: expenseType,
+    '金额(元)': amount,
+    事由: reason,
+    审批状态: '已提交',
+    附件: attachmentName,
+    submittedAt: new Date().toISOString(),
+    submittedBy: currentUser ? currentUser.username : ''
+  };
+
+  data.push(record);
+  saveData(data);
+
+  document.getElementById('reimbursementForm').reset();
+  document.getElementById('fieldDepartment').value = currentUser ? currentUser.dept : '';
+  document.getElementById('fieldReimburser').value = currentUser ? currentUser.name : '';
+  hideAllAlerts();
+  showAlert('alertSuccess');
+  setTimeout(function() { showToast('报销单 ' + newId + ' 已成功提交！', 'success'); }, 500);
+
+  return false;
+}
+
+function handleSaveDraft() {
+  var reimburser = document.getElementById('fieldReimburser').value.trim();
+  var department = document.getElementById('fieldDepartment').value;
+  var date = document.getElementById('fieldDate').value;
+  var expenseType = document.getElementById('fieldExpenseType').value;
+  var amount = parseFloat(document.getElementById('fieldAmount').value) || 0;
+  var reason = document.getElementById('fieldReason').value.trim();
+
+  if (!reimburser || !department || !date || !expenseType || amount <= 0 || !reason) {
+    showToast('请填写完整信息后再保存草稿', 'error');
+    return;
+  }
+
+  var data = getData();
+  var record = {
+    id: 'BX' + new Date().getFullYear() + String(data.length + 1).padStart(4, '0'),
+    序号: data.length + 1,
+    报销人: reimburser,
+    部门: department,
+    报销日期: date,
+    费用类型: expenseType,
+    '金额(元)': amount,
+    事由: reason,
+    审批状态: '草稿',
+    附件: '',
+    submittedAt: new Date().toISOString(),
+    submittedBy: currentUser ? currentUser.username : ''
+  };
+
+  data.push(record);
+  saveData(data);
+
+  document.getElementById('reimbursementForm').reset();
+  document.getElementById('fieldDepartment').value = currentUser ? currentUser.dept : '';
+  document.getElementById('fieldReimburser').value = currentUser ? currentUser.name : '';
+
+  hideAllAlerts();
+  showAlert('alertDraft');
+  showToast('草稿已保存', 'success');
+}
+
+function showAlert(id) {
+  hideAllAlerts();
+  var el = document.getElementById(id);
+  if (el) el.classList.add('show');
+  setTimeout(function() { if (el) el.classList.remove('show'); }, 5000);
+}
+
+function hideAllAlerts() {
+  ['alertSuccess', 'alertError', 'alertDraft'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('show');
+  });
+}
+
+/* ========== 表格渲染 ========== */
+function renderTable() {
+  var data = getData();
+  var keyword = (document.getElementById('searchKeyword').value || '').trim().toLowerCase();
+  var deptFilter = (document.getElementById('filterDepartment').value || '').trim();
+  var statusFilter = (document.getElementById('filterStatus').value || '').trim();
+
+  var filtered = data.slice().reverse();
+
+  if (keyword) {
+    filtered = filtered.filter(function(r) {
+      return r.报销人.toLowerCase().indexOf(keyword) >= 0 ||
+             r.事由.toLowerCase().indexOf(keyword) >= 0 ||
+             r.id.toLowerCase().indexOf(keyword) >= 0;
+    });
+  }
+  if (deptFilter) filtered = filtered.filter(function(r) { return r.部门.indexOf(deptFilter) >= 0; });
+  if (statusFilter) filtered = filtered.filter(function(r) { return r.审批状态.indexOf(statusFilter) >= 0; });
+
+  var tbody = document.getElementById('tableBody');
+  var empty = document.getElementById('emptyState');
+  document.getElementById('totalCount').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  var html = '';
+  for (var i = 0; i < filtered.length; i++) {
+    var r = filtered[i];
+    var idx = filtered.length - i;
+    var disabledAttr = (r.审批状态 === '已审批' || r.审批状态 === '已驳回') ? 'disabled' : '';
+    var approveBtn = (r.审批状态 === '已提交' || r.审批状态 === '审批中') ?
+      '<button class="btn btn-success" style="height:28px;padding:0 8px;font-size:12px;margin-left:4px" onclick="quickApprove(\'' + r.id + '\')">审批</button>' : '';
+    html += '<tr>' +
+      '<td><input type="checkbox" class="row-checkbox" data-id="' + r.id + '" ' + disabledAttr + '></td>' +
+      '<td>' + idx + '</td>' +
+      '<td>' + escapeHtml(r.报销人) + '</td>' +
+      '<td>' + escapeHtml(r.部门) + '</td>' +
+      '<td>' + r.报销日期 + '</td>' +
+      '<td>' + escapeHtml(r.费用类型) + '</td>' +
+      '<td style="text-align:right;font-weight:600">' + Number(r['金额(元)']).toLocaleString('zh-CN', {minimumFractionDigits: 2}) + '</td>' +
+      '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.事由) + '">' + escapeHtml(r.事由) + '</td>' +
+      '<td><span class="status-badge status-' + getStatusClass(r.审批状态) + '">' + r.审批状态 + '</span></td>' +
+      '<td>' +
+        '<button class="btn btn-default" style="height:28px;padding:0 10px;font-size:12px" onclick="viewDetail(\'' + r.id + '\')">详情</button>' +
+        approveBtn +
+        '<button class="btn btn-danger" style="height:28px;padding:0 8px;font-size:12px;margin-left:4px" onclick="deleteRecord(\'' + r.id + '\')">删除</button>' +
+      '</td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function getStatusClass(status) {
+  var map = { '草稿': 'draft', '已提交': 'submitted', '审批中': 'pending', '已审批': 'approved', '已驳回': 'rejected' };
+  return map[status] || 'draft';
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+/* ========== 全选 ========== */
+function toggleSelectAll() {
+  var master = document.getElementById('selectAll');
+  var checkboxes = document.querySelectorAll('.row-checkbox:not([disabled])');
+  for (var i = 0; i < checkboxes.length; i++) {
+    checkboxes[i].checked = master.checked;
+  }
+}
+
+/* ========== 详情弹窗 ========== */
+function viewDetail(id) {
+  var data = getData();
+  var r = null;
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].id === id) { r = data[i]; break; }
+  }
+  if (!r) return;
+
+  currentDetailId = id;
+
+  document.getElementById('modalBody').innerHTML =
+    '<div class="detail-row"><span class="detail-label">流水号</span><span class="detail-value">' + r.id + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">报销人</span><span class="detail-value">' + escapeHtml(r.报销人) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">部门</span><span class="detail-value">' + escapeHtml(r.部门) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">报销日期</span><span class="detail-value">' + r.报销日期 + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">费用类型</span><span class="detail-value">' + escapeHtml(r.费用类型) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">金额</span><span class="detail-value" style="font-size:18px;font-weight:700;color:#1a3a5c">¥' + Number(r['金额(元)']).toLocaleString('zh-CN', {minimumFractionDigits: 2}) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">事由</span><span class="detail-value">' + escapeHtml(r.事由) + '</span></div>' +
+    '<div class="detail-row"><span class="detail-label">审批状态</span><span class="detail-value"><span class="status-badge status-' + getStatusClass(r.审批状态) + '">' + r.审批状态 + '</span></span></div>' +
+    (r.附件 ? '<div class="detail-row"><span class="detail-label">附件</span><span class="detail-value">' + escapeHtml(r.附件) + '</span></div>' : '') +
+    '<div class="detail-row"><span class="detail-label">提交时间</span><span class="detail-value">' + new Date(r.submittedAt).toLocaleString('zh-CN') + '</span></div>';
+
+  var approveBtn = document.getElementById('modalApproveBtn');
+  var rejectBtn = document.getElementById('modalRejectBtn');
+  if (r.审批状态 === '已提交' || r.审批状态 === '审批中') {
+    approveBtn.style.display = '';
+    rejectBtn.style.display = '';
+  } else {
+    approveBtn.style.display = 'none';
+    rejectBtn.style.display = 'none';
+  }
+
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('show');
+  currentDetailId = null;
+}
+
+function approveFromModal() {
+  if (!currentDetailId) return;
+  updateStatus(currentDetailId, '已审批');
+  closeDetailModal();
+  renderTable();
+  updateDashboard();
+  showToast('报销单 ' + currentDetailId + ' 已审批通过', 'success');
+}
+
+function rejectFromModal() {
+  if (!currentDetailId) return;
+  updateStatus(currentDetailId, '已驳回');
+  closeDetailModal();
+  renderTable();
+  updateDashboard();
+  showToast('报销单 ' + currentDetailId + ' 已驳回', 'error');
+}
+
+function quickApprove(id) {
+  updateStatus(id, '已审批');
+  renderTable();
+  updateDashboard();
+  showToast('报销单 ' + id + ' 已审批通过', 'success');
+}
+
+function deleteRecord(id) {
+  if (!confirm('确认删除该报销单（流水号：' + id + '）？此操作不可撤销。')) return;
+  var data = getData();
+  data = data.filter(function(r) { return r.id !== id; });
+  data.forEach(function(r, idx) { r.序号 = idx + 1; });
+  saveData(data);
+  renderTable();
+  updateDashboard();
+  showToast('报销单 ' + id + ' 已删除', 'error');
+}
+
+function batchApprove() {
+  var checked = document.querySelectorAll('.row-checkbox:checked');
+  if (checked.length === 0) {
+    showToast('请先选择需要审批的报销单', 'error');
+    return;
+  }
+  if (!confirm('确认批量审批通过选中的 ' + checked.length + ' 条报销单？')) return;
+  for (var i = 0; i < checked.length; i++) {
+    updateStatus(checked[i].dataset.id, '已审批');
+  }
+  document.getElementById('selectAll').checked = false;
+  renderTable();
+  updateDashboard();
+  showToast('已批量审批通过 ' + checked.length + ' 条报销单', 'success');
+}
+
+function updateStatus(id, newStatus) {
+  var data = getData();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].id === id) { data[i].审批状态 = newStatus; break; }
+  }
+  saveData(data);
+}
+
+/* ========== 数据概览 ========== */
+function updateDashboard() {
+  var data = getData();
+  document.getElementById('statTotal').textContent = data.length;
+  var pendingCount = 0;
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].审批状态 === '已提交' || data[i].审批状态 === '审批中') pendingCount++;
+  }
+  document.getElementById('statPending').textContent = pendingCount;
+  var approvedCount = 0;
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].审批状态 === '已审批') approvedCount++;
+  }
+  document.getElementById('statApproved').textContent = approvedCount;
+  var rejectedCount = 0;
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].审批状态 === '已驳回') rejectedCount++;
+  }
+  document.getElementById('statRejected').textContent = rejectedCount;
+
+  var catMap = {};
+  var totalAmount = 0;
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].审批状态 === '草稿') continue;
+    var key = data[i].费用类型;
+    if (!catMap[key]) catMap[key] = { count: 0, amount: 0 };
+    catMap[key].count++;
+    catMap[key].amount += data[i]['金额(元)'];
+    totalAmount += data[i]['金额(元)'];
+  }
+
+  var summaryEl = document.getElementById('categorySummary');
+  var keys = Object.keys(catMap);
+  if (keys.length === 0) {
+    summaryEl.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:24px">暂无报销数据</td></tr>';
+    return;
+  }
+
+  keys.sort(function(a, b) { return catMap[b].amount - catMap[a].amount; });
+  var html = '';
+  for (var i = 0; i < keys.length; i++) {
+    var type = keys[i];
+    var info = catMap[type];
+    html += '<tr>' +
+      '<td>' + type + '</td>' +
+      '<td>' + info.count + ' 笔</td>' +
+      '<td style="text-align:right;font-weight:600">¥' + info.amount.toLocaleString('zh-CN', {minimumFractionDigits: 2}) + '</td>' +
+      '<td>' + (totalAmount > 0 ? (info.amount / totalAmount * 100).toFixed(1) : 0) + '%</td>' +
+      '</tr>';
+  }
+  summaryEl.innerHTML = html;
+}
+
+/* ========== 初始化 ========== */
+document.getElementById('fieldDate').value = new Date().toISOString().split('T')[0];
+
+if (getData().length === 0) {
+  var sampleData = [
+    { id:'BX20260001', 序号:1, 报销人:'张明远', 部门:'销售部', 报销日期:'2026-06-20', 费用类型:'差旅费', '金额(元)':3580, 事由:'赴天津客户洽谈业务', 审批状态:'已审批', 附件:'差旅发票_张明远.pdf', submittedAt:'2026-06-20T09:15:00Z', submittedBy:'user001' },
+    { id:'BX20260002', 序号:2, 报销人:'李芳华', 部门:'采购部', 报销日期:'2026-06-21', 费用类型:'差旅费', '金额(元)':2200, 事由:'赴石家庄考察供应商', 审批状态:'已审批', 附件:'差旅发票_李芳华.pdf', submittedAt:'2026-06-21T10:30:00Z', submittedBy:'user001' },
+    { id:'BX20260003', 序号:3, 报销人:'王建国', 部门:'技术部', 报销日期:'2026-06-22', 费用类型:'办公费', '金额(元)':860, 事由:'购买打印耗材', 审批状态:'已提交', 附件:'', submittedAt:'2026-06-22T14:00:00Z', submittedBy:'user001' },
+    { id:'BX20260004', 序号:4, 报销人:'赵雅琴', 部门:'财务部', 报销日期:'2026-06-23', 费用类型:'差旅费', '金额(元)':4150, 事由:'赴沧州参加税务培训', 审批状态:'已提交', 附件:'培训通知.pdf', submittedAt:'2026-06-23T08:20:00Z', submittedBy:'admin' },
+  ];
+  saveData(sampleData);
+}
+
+renderTable();
+updateDashboard();
+</script>
+</body>
+</html>
